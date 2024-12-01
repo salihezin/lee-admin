@@ -1,12 +1,13 @@
 'use client';
 
+import { NavbarMenu } from '@/interfaces/navbarMenu';
 import { RootState } from '@/redux/store';
 import { postMenu } from '@/services/navbarMenus';
 import { useRouter } from 'next/navigation';
 import { Button } from 'primereact/button';
 import { InputText } from 'primereact/inputtext';
 import { Toast } from 'primereact/toast';
-import { TreeSelect } from 'primereact/treeselect';
+import { TreeSelect, TreeSelectSelectionKeysType } from 'primereact/treeselect';
 import { useRef, useState } from 'react';
 import { useSelector } from 'react-redux';
 
@@ -14,7 +15,7 @@ const NavbarMenuAddPage = () => {
     const toastRef = useRef<Toast>(null);
     const router = useRouter();
     const menuData = useSelector((state: RootState) => state.navbarMenu);
-    const [selectValue, setSelectValue] = useState(null);
+    const [selectValue, setSelectValue] = useState<string | TreeSelectSelectionKeysType | TreeSelectSelectionKeysType[] | null>(null);
     const [title, setTitle] = useState('');
     const [url, setUrl] = useState('');
     const [formValid, setFormValid] = useState({
@@ -101,7 +102,7 @@ const NavbarMenuAddPage = () => {
             postMenu({
                 title,
                 url,
-                parentId: selectValue ? parseInt(selectValue) : 0,
+                parentId: typeof selectValue === 'string' ? parseInt(selectValue) : 0,
                 mainMenu: false,
                 isActive: true,
                 icon: '',
@@ -126,13 +127,14 @@ const NavbarMenuAddPage = () => {
         }
     };
 
-    function convertToTreeSelectFormat(data) {
-        const lastChild = data?.find((item) => item.data.grandParentTitle !== null);
+    function convertToTreeSelectFormat(data: NavbarMenu[] | null): any {
+        // const lastChild = data?.find((item) => item.data.grandParentTitle !== null);
+        const lastChild = data?.find((item) => item.grandParentTitle !== null);
         if (lastChild) return;
         const formattedData = data?.map((item) => ({
-            key: item.key.toString(),
-            label: item.data.title,
-            data: item.data,
+            key: item.id?.toString(),
+            label: item.title,
+            data: item,
             children: item.children ? convertToTreeSelectFormat(item.children) : []
         }));
 
@@ -185,8 +187,8 @@ const NavbarMenuAddPage = () => {
                 className={'flex mt-3 mb-3' + (formValid.selectValue.isValid ? '' : ' p-invalid')}
                 value={selectValue}
                 options={convertToTreeSelectFormat(menuData.formattedMenuList)}
-                optionLabel="title"
-                optionValue="id"
+                selectionMode="single"
+                metaKeySelection={false}
                 onChange={(e) => {
                     setFormValid((prevState) => ({
                         ...prevState,
@@ -195,7 +197,9 @@ const NavbarMenuAddPage = () => {
                             message: ''
                         }
                     }));
-                    setSelectValue(e.value);
+                    if (e.value !== undefined) {
+                        setSelectValue(e.value);
+                    }
                 }}
                 placeholder="Hangi Menü Altında?"
             />
